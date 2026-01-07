@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
+
 @dataclass
 class CommandResult:
     """ Result of running subprocess """
@@ -15,7 +16,7 @@ class CommandResult:
     returncode: int
     stdout: str
     stderr: str
-
+1
 class SubdomainEnumeration:
     """ Class used for enumerating subdomains from targets via multiple passive sources
     Args:
@@ -24,22 +25,24 @@ class SubdomainEnumeration:
     def __init__(self, targets: list):
         self.targets = targets
         self.sources = [
-            self.subfinder 
+            self.subfinder,
+            self.amass,
+            self.assetfinder
+        ]
+        self.base_folder = "subdomain_enumeration"
+        self.folders = [
+            f"{self.base_folder}/subfinder",
+            f"{self.base_folder}/amass",
+            f"{self.base_folder}/assetfinder"
         ]
         self.output_files = []
 
     def create_storage_structure(self):
         """ Create basic file structure for storing findings """
-        base = "subdomain_enumeration"
-        folders = [
-            f"{base}/subfinder",
-        ]
-
-        # Create folders for storing found subdomains
-        base_path = Path(base)
+        base_path = Path(self.base_folder)
         if not base_path.exists():
             base_path.mkdir()
-        for folder in folders:
+        for folder in self.folders:
             folder_path = Path(folder)
             if not folder_path.exists():
                 folder_path.mkdir()
@@ -74,6 +77,39 @@ class SubdomainEnumeration:
             cmd = f"subfinder -dL {str(tmp_path)} -silent | anew -q {output_file}"
             result = self.run_command(
                 name="subfinder",
+                cmd=cmd
+            )
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+        return result
+    
+
+    def amass(self) -> CommandResult:
+        """ Runs amass tool in its passive mode """
+        output_file = "subdomain_enumeration/amass/output.txt"
+        self.output_files.append(output_file)
+        cmd = f"amass enum -d {','.join(self.targets)} -passive -silent | anew -q {output_file}"
+        result = self.run_command(
+            name="amass",
+            cmd=cmd
+        )
+
+        return result
+    
+
+    def assetfinder(self) -> CommandResult:
+        """ Iterates over targets and runs assetfinder tool against each """
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".txt", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+            tmp.write("\n".join(self.targets) + "\n")
+
+        try:
+            output_file = "subdomain_enumeration/assetfinder/output.txt"
+            self.output_files.append(output_file)
+            cmd = f"while read -r domain; do assetfinder -subs-only $domain | anew -q {output_file}; done < {str(tmp_path)}"
+            result = self.run_command(
+                name="assetfinder",
                 cmd=cmd
             )
         finally:
