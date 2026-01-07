@@ -16,7 +16,7 @@ class CommandResult:
     returncode: int
     stdout: str
     stderr: str
-1
+
 class SubdomainEnumeration:
     """ Class used for enumerating subdomains from targets via multiple passive sources
     Args:
@@ -127,7 +127,7 @@ class SubdomainEnumeration:
                 existing_files.append(filepath)
 
         # Concat all output files, sort, throw into a file
-        cmd = f"cat {' '.join(existing_files)} | sort -u | anew -q subdomain_enumeration/found_subdomains.txt"
+        cmd = f"cat {' '.join(existing_files)} | sort -u | httpx | anew -q subdomain_enumeration/found_subdomains.txt"
         subprocess.run(
             cmd,
             shell=True,
