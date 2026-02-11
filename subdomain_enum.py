@@ -29,13 +29,15 @@ class SubdomainEnumeration:
         self.sources = [
             self.subfinder,
             self.amass,
-            self.assetfinder
+            self.assetfinder,
+            self.crtsh
         ]
         self.base_folder = "subdomain_enumeration"
         self.folders = [
             f"{self.base_folder}/subfinder",
             f"{self.base_folder}/amass",
-            f"{self.base_folder}/assetfinder"
+            f"{self.base_folder}/assetfinder",
+            f"{self.base_folder}/crtsh"
         ]
         self.output_files = []
 
@@ -118,8 +120,21 @@ class SubdomainEnumeration:
             tmp_path.unlink(missing_ok=True)
 
         return result
-        
-
+    
+    def crtsh(self) -> list:
+        """ Runs curl command against the crtsh utility """
+        output_file = "subdomain_enumeration/crtsh/output.txt"
+        self.output_files.append(output_file)
+        results = []
+        for target in self.targets:
+            cmd = f"curl -s https://crt.sh/?Identity=%.{target} | grep \">*.{target}\" | sed 's/<[/]*[TB][DR]>/\n/g' | grep -vE \"<|^[\*]*[\.]*{target}\" | sort -u | awk 'NF'"
+            result = self.run_command(
+                name=f"crt-{target}",
+                cmd=cmd
+            )
+            results.append(result)
+        return results
+            
     def aggregate_subdomains(self):
         """ Combines all the found subdomains into a singular file """
         # Check which output files exist
