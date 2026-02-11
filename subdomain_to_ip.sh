@@ -25,5 +25,13 @@ do
     while read -r ip
     do
         echo "${subdomain} ${ip}" >> "subdomain_ip_mapping.txt"
+        echo "${ip}" >> "ip_list.txt"
     done <<< "${ips}"
 done < "${INPUT}"
+
+# ipinfo API
+mkdir ip_enumeration
+while read -r ip
+do
+    curl -s "http://ipinfo.io/${ip}" | anew -q "ip_enumeration/${ip}.txt"
+done < "ip_list.txt"
