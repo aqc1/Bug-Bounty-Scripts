@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
+# Modify this to whichever user agent string works best
+USER_AGENT = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0"
 
 @dataclass
 class CommandResult:
@@ -127,7 +129,7 @@ class SubdomainEnumeration:
                 existing_files.append(filepath)
 
         # Concat all output files, sort, throw into a file
-        cmd = f"cat {' '.join(existing_files)} | sort -u | httpx | anew -q subdomain_enumeration/found_subdomains.txt"
+        cmd = f"cat {' '.join(existing_files)} | sort -u | httpx -H {USER_AGENT} | anew -q subdomain_enumeration/found_subdomains.txt"
         subprocess.run(
             cmd,
             shell=True,
