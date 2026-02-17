@@ -8,9 +8,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
-# Modify this to whichever user agent string works best
-USER_AGENT = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0"
-
 @dataclass
 class CommandResult:
     """ Result of running subprocess """
