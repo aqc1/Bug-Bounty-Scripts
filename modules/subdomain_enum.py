@@ -28,14 +28,14 @@ class SubdomainEnumeration:
         self.targets = targets
         self.sources = [
             self.subfinder,
-            self.amass,
+            #self.amass,
             self.assetfinder,
             self.crtsh
         ]
         self.base_folder = "subdomain_enumeration"
         self.folders = [
             f"{self.base_folder}/subfinder",
-            f"{self.base_folder}/amass",
+            #f"{self.base_folder}/amass",
             f"{self.base_folder}/assetfinder",
             f"{self.base_folder}/crtsh"
         ]
@@ -89,17 +89,17 @@ class SubdomainEnumeration:
         return result
     
 
-    def amass(self) -> CommandResult:
-        """ Runs amass tool in its passive mode """
-        output_file = "subdomain_enumeration/amass/output.txt"
-        self.output_files.append(output_file)
-        cmd = f"amass enum -d {','.join(self.targets)} -passive -silent | anew -q {output_file}"
-        result = self.run_command(
-            name="amass",
-            cmd=cmd
-        )
-
-        return result
+    #def amass(self) -> CommandResult:
+    #    """ Runs amass tool in its passive mode """
+    #    output_file = "subdomain_enumeration/amass/output.txt"
+    #    self.output_files.append(output_file)
+    #    cmd = f"amass enum -d {','.join(self.targets)} -passive -silent -norecursive | anew -q {output_file}"
+    #    result = self.run_command(
+    #        name="amass",
+    #        cmd=cmd
+    #    )
+    #
+    #    return result
     
 
     def assetfinder(self) -> CommandResult:
@@ -123,17 +123,23 @@ class SubdomainEnumeration:
     
     def crtsh(self) -> list:
         """ Runs curl command against the crtsh utility """
-        output_file = "subdomain_enumeration/crtsh/output.txt"
-        self.output_files.append(output_file)
-        results = []
-        for target in self.targets:
-            cmd = f"curl -s https://crt.sh/?Identity=%.{target} | grep \">*.{target}\" | sed 's/<[/]*[TB][DR]>/\n/g' | grep -vE \"<|^[\*]*[\.]*{target}\" | sort -u | awk 'NF'"
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".txt", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+            tmp.write("\n".join(self.targets) + "\n")
+
+        try:
+            output_file = "subdomain_enumeration/crtsh/output.txt"
+            self.output_files.append(output_file)
+            curl_cmd = "curl -s \"https://crt.sh/?Identity=%.$target\" | grep \">*.$target\" | sed 's/<[/]*[TB][DR]>/\\n/g' | grep -vE \"<|^[\*]*[\.]*$target\" | sort -u | awk 'NF'"
+            cmd = f"while read -r target; do {curl_cmd} | anew -q {output_file}; done < {str(tmp_path)}"
             result = self.run_command(
-                name=f"crt-{target}",
+                name=f"crtsh",
                 cmd=cmd
             )
-            results.append(result)
-        return results
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+        return result
             
     def aggregate_subdomains(self):
         """ Combines all the found subdomains into a singular file """
@@ -144,7 +150,7 @@ class SubdomainEnumeration:
                 existing_files.append(filepath)
 
         # Concat all output files, sort, throw into a file
-        cmd = f"cat {' '.join(existing_files)} | sort -u | httpx -H {USER_AGENT} | anew -q subdomain_enumeration/found_subdomains.txt"
+        cmd = f"cat {' '.join(existing_files)} | sort -u | httpx | anew -q subdomain_enumeration/found_subdomains.txt"
         subprocess.run(
             cmd,
             shell=True,
@@ -223,7 +229,7 @@ def main():
                 print(f"\t[-] {name} failed: {e}")
     
     # Combine results
-    print("[+] Aggregating results")
+    print("[+] Aggregating and probing results")
     enum.aggregate_subdomains()
 
 if __name__ == "__main__":
