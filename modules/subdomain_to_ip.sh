@@ -19,14 +19,11 @@ do
     subdomain="${subdomain%/}"
     [[ -z "${subdomain}" ]] && continue
 
-    ips=$(dig +short "${subdomain}" 2>/dev/null)
-    [[ -z "${ips}" ]] && continue
-
-    while read -r ip
+    dig -4 +short "${subdomain}" 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | while read -r ip
     do
-        echo "${subdomain} ${ip}" >> "subdomain_ip_mapping.txt"
-        echo "${ip}" >> "ip_list.txt"
-    done <<< "${ips}"
+        echo "${subdomain} ${ip}" | anew -q "subdomain_ip_mapping.txt"
+        echo "${ip}" | anew -q "ip_list.txt"
+    done
 done < "${INPUT}"
 
 # ipinfo API
